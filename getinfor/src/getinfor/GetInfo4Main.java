@@ -110,10 +110,14 @@ public class GetInfo4Main {
 //				logger.info("-----------三条的id:======"+id);
 //
 //			}
+			if(id.equals("37012119710125058X")) {
+				logger.info("-----------三条的id:======"+id);
+			}
 //			写入单元格位置
 			int[] pos = { 4, 5, 6, 7, 8, 9, 10 };
 			String[] writeValues = { "", "", "", "", "", "", "" };
 			for (int i = 0; i < jzcs; i++) {
+//				这里有问题确定取的顺序需要,jzxx依次放的3，2，1次
 				initValues(jzxx, i, i*2, writeValues);
 			}
 			for(int k = 0;k<pos.length;k++) {
@@ -133,9 +137,10 @@ public class GetInfo4Main {
 	 * @param jcStartIndex
 	 * @param writeValues
 	 */
-	private static void initValues(List<Map<String, String>> jzxx, int i, int jcStartIndex, String[] writeValues) {
+	private static void initValues(List<Map<String, String>> jzxx, int jcsy, int jcStartIndex, String[] writeValues) {
 		for (int j = 0; j < valueOfKey.length; j++) {
-			String value = jzxx.get(i).get(valueOfKey[j]);
+//			这里有问题确定取的顺序需要，jzxx依次放的3，2，1次
+			String value = jzxx.get(jcsy).get(valueOfKey[j]);
 			if(value==null||value.length()==0) {
 				value="                ";
 			}
@@ -152,7 +157,7 @@ public class GetInfo4Main {
 				break;
 //			接种地点
 			case 2:
-				writeValues[jcStartIndex] =  writeValues[0]+value;
+				writeValues[jcStartIndex] =  writeValues[jcStartIndex]+value;
 				break;
 			case 3:
 //			接种剂次
