@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.config.RequestConfig;
@@ -38,8 +39,7 @@ import com.google.gson.JsonParser;
  */
 public class GetInfo4Main {
 
-	public static  String url = "https://zhuisu.jncdc.cn/api/va/wandaRecord/getWandaVaccination";
-	private static String parames = "?sfzjhm=codeNum&justCovid=1";
+	
 	private static final String localFile = "D:\\Users\\aaa.xlsx";
 	private static File file = new File(localFile);
 
@@ -64,7 +64,8 @@ public class GetInfo4Main {
 
 	public static void main(String[] args) throws EncryptedDocumentException, IOException {
 		List<String> numbers = readExcelGetNumbers();
-		int count = getInforFromServer(numbers);
+		Client4Request client =new Client4Request();
+		int count = client.getInforFromServer(numbers);
 		writeInforToExcel();
 	}
 
@@ -106,19 +107,32 @@ public class GetInfo4Main {
 				continue;
 			}
 			int jzcs = jzxx.size();
-//			if(jzcs==3) {
-//				logger.info("-----------三条的id:======"+id);
-//
-//			}
-			if(id.equals("37012119710125058X")) {
+			if(jzcs==3) {
 				logger.info("-----------三条的id:======"+id);
+
 			}
 //			写入单元格位置
-			int[] pos = { 4, 5, 6, 7, 8, 9, 10 };
+			int[] pos = {  4, 5, 6, 7,8, 9,10 };
 			String[] writeValues = { "", "", "", "", "", "", "" };
+			
 			for (int i = 0; i < jzcs; i++) {
 //				这里有问题确定取的顺序需要,jzxx依次放的3，2，1次
-				initValues(jzxx, i, i*2, writeValues);
+				int writeIndex = 0;
+//				首先获取的是第三或者第二条
+				Map<String, String> jzxxdata = jzxx.get(i);
+//				第二次信息
+				if(jzcs==2&&i==0) {
+					writeIndex = 2;
+				}else if(jzcs==3&&i==0) {
+					writeIndex =4;
+				}else if(jzcs==2&&i==1){
+					writeIndex =0;
+				}else if(jzcs==3&&i==1) {
+					writeIndex = 2;
+				}else {
+					writeIndex =0;
+				}
+				initValues(jzxxdata, i, writeIndex, writeValues);
 			}
 			for(int k = 0;k<pos.length;k++) {
 				Cell cell2Write = row.getCell(pos[k]);
@@ -137,10 +151,10 @@ public class GetInfo4Main {
 	 * @param jcStartIndex
 	 * @param writeValues
 	 */
-	private static void initValues(List<Map<String, String>> jzxx, int jcsy, int jcStartIndex, String[] writeValues) {
+	private static void initValues(Map<String, String> jzxx, int jcsy, int jcStartIndex, String[] writeValues) {
 		for (int j = 0; j < valueOfKey.length; j++) {
 //			这里有问题确定取的顺序需要，jzxx依次放的3，2，1次
-			String value = jzxx.get(jcsy).get(valueOfKey[j]);
+			String value = jzxx.get(valueOfKey[j]);
 			if(value==null||value.length()==0) {
 				value="                ";
 			}
@@ -168,77 +182,14 @@ public class GetInfo4Main {
 		}
 	}
 
-	/**
-	 * @param numbers
-	 * @return 处理条数
-	 */
-	private static int getInforFromServer(List<String> numbers) {
-
-		// 建立Cookie存储
-		CookieStore cookieStore = new BasicCookieStore();
-		// 新建Http客户端
-		CloseableHttpClient httpClient = HttpClients.custom().setDefaultCookieStore(cookieStore).build();
-		for (int i = 0; i < numbers.size(); i++) {
-			parames = parames.replace("codeNum", numbers.get(i));
-			try {
-		// --->使用StringBuffer类进行字符拼接
-		/* 发送GET请求 */
-				// 创建get请求
-				HttpGet httpGet = new HttpGet(url + parames);
-				String cookie = "";
-				// 创建响应模型，接收返回的响应实体
-				CloseableHttpResponse response = null; // 未初始化
-				try {
-					// 配置信息
-					RequestConfig requestConfig = RequestConfig.custom()
-							// 设置连接超时时间(毫秒)
-							.setConnectionRequestTimeout(5000)
-							// 设置socket读写超时的时间
-							.setSocketTimeout(5000)
-							// 设置是否允许重定向
-							.setRedirectsEnabled(true).build();
-					// 将配置信息放入Get请求中
-					httpGet.setConfig(requestConfig);
-					// 响应模型接收这个请求
-					response = httpClient.execute(httpGet);
-					// 冲响应模型中获取响应实体
-					HttpEntity responseEntity = response.getEntity();
-					System.out.println("响应状态为:" + response.getStatusLine());
-					// 判断响应实体
-					if (responseEntity != null) {
-						// System.out.println("响应内容长度为:" + responseEntity.getContentLength());
-						// System.out.println("响应内容为:" + EntityUtils.toString(responseEntity));
-						String respData = EntityUtils.toString(responseEntity);
-						logger.info("===respData==:"+respData);
-						anlyzeRespAndWriteFile(respData, numbers.get(i));
-					}
-				} catch (ClientProtocolException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			} catch (Exception e) {
-				System.out.println(e.getMessage());
-				e.printStackTrace();
-			}
-			parames = parames.replace(numbers.get(i), "codeNum");
-//			try {
-//				Thread.currentThread().sleep(1000);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-		}
-
-		return 0;
-	}
+	
 
 	/**
 	 * 处理每条响应的数据
 	 * 
 	 * @param respData
 	 */
-	private static void anlyzeRespAndWriteFile(String respData, String id) {
+	public static void anlyzeRespAndWriteFile(String respData, String id) {
 //    	manufacturerName=北京科兴中维生物技术有限公司
 		String data = respData.substring(respData.indexOf("["), respData.lastIndexOf("]") + 1);
 		System.out.println("=========data:" + data);
